@@ -170,3 +170,49 @@ function App() {
 }
 
 export default App;
+import ErrorMessage from './components/ErrorMessage';
+
+// Add this state near the top:
+const [error, setError] = useState(null);
+
+// Update handleGenerate:
+const handleGenerate = async () => {
+  if (!userInput.trim()) return;
+  
+  setError(null);
+  setGeneratingCard(true);
+  
+  try {
+    const response = await fetch('http://localhost:3001/generate-card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        userInput,
+        language: userLanguage 
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to generate card');
+    }
+    
+    const cardData = await response.json();
+    setGeneratedCard(cardData);
+  } catch (err) {
+    console.error('Card generation error:', err);
+    setError('Failed to generate your card. Please try again.');
+  } finally {
+    setGeneratingCard(false);
+  }
+};
+
+// Add before the closing </div>:
+{error && (
+  <ErrorMessage 
+    message={error} 
+    onRetry={() => {
+      setError(null);
+      handleGenerate();
+    }} 
+  />
+)}
