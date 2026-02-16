@@ -170,3 +170,19 @@ const handlePreview = async () => {
     </div>
   );
 }
+const handleShare = async () => {
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: cardData.mainMessage,
+        text: `Check out this AI-generated card: ${cardData.mainMessage}`,
+        url: window.location.href
+      });
+    } catch (error) {
+      console.log('Share cancelled');
+    }
+  } else {
+    navigator.clipboard.writeText(window.location.href);
+    alert('Link copied to clipboard!');
+  }
+};

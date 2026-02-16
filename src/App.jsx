@@ -4,6 +4,12 @@ import LoadingState from './components/LoadingState';
 import CardPreview from './components/CardPreview';
 import ErrorMessage from './components/ErrorMessage';
 import { detectUserLanguage, pricing } from './utils/languages';
+import { saveCardToHistory } from './utils/storage';
+import CardHistory from './components/CardHistory';
+import TipsSection from './components/TipsSection';
+import Footer from './components/Footer';
+<TipsSection language={userLanguage} />
+
 
 function App() {
   const [userLanguage, setUserLanguage] = useState('en');
@@ -18,6 +24,24 @@ function App() {
     const detectedLang = detectUserLanguage();
     setUserLanguage(detectedLang);
   }, []);
+useEffect(() => {
+  const handleKeyPress = (e) => {
+    // Ctrl/Cmd + Enter to generate
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      if (userInput.trim() && !generatingCard) {
+        handleGenerate();
+      }
+    }
+    
+    // Escape to start over
+    if (e.key === 'Escape' && generatedCard) {
+      setGeneratedCard(null);
+    }
+  };
+  
+  window.addEventListener('keydown', handleKeyPress);
+  return () => window.removeEventListener('keydown', handleKeyPress);
+}, [userInput, generatingCard, generatedCard]);
 
   useEffect(() => {
     loadUITranslations(userLanguage);
@@ -79,7 +103,9 @@ function App() {
       }
       
       const cardData = await response.json();
-      setGeneratedCard(cardData);
+      setGeneratedCard(cardData); // Show it on screen
+      saveCardToHistory(cardData)  // SUCCESS
+
     } catch (err) {
       console.error('Card generation error:', err);
       setError('Failed to generate your card. Please try again.');
@@ -180,6 +206,10 @@ function App() {
           />
         )}
       </div>
+
+
+<Footer />
+
     </div>
   );
 }
