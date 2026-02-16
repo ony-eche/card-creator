@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import LanguageSelector from './components/LanguageSelector';
 import LoadingState from './components/LoadingState';
+import CardPreview from './components/CardPreview';
+import ErrorMessage from './components/ErrorMessage';
 import { detectUserLanguage, pricing } from './utils/languages';
 
 function App() {
@@ -10,19 +12,17 @@ function App() {
   const [loadingUI, setLoadingUI] = useState(true);
   const [generatingCard, setGeneratingCard] = useState(false);
   const [generatedCard, setGeneratedCard] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-  const detectLanguage = async () => {
-    const locationLang = await detectLocationLanguage();
-    if (locationLang) {
-      setUserLanguage(locationLang);
-      return;
-    }
-    
-    const browserLang = detectUserLanguage();
-    setUserLanguage(browserLang);
-  };
-    
+    const detectedLang = detectUserLanguage();
+    setUserLanguage(detectedLang);
+  }, []);
+
+  useEffect(() => {
+    loadUITranslations(userLanguage);
+  }, [userLanguage]);
+
   const loadUITranslations = async (lang) => {
     setLoadingUI(true);
     try {
@@ -43,10 +43,10 @@ function App() {
 
   const getDefaultUIText = () => ({
     title: "AI Card Creator",
-    subtitle: "Describe your perfect card and leave the creation to usS",
+    subtitle: "Describe your perfect card and let AI create it",
     placeholder: "Example: Create a birthday card for my sister who loves unicorns and the color purple...",
-    generateButton: "✨ Create My Card",
-    loadingMessage: "We are designing your perfect card...",
+    generateButton: "✨ Generate My Card",
+    loadingMessage: "AI is designing your perfect card...",
     examples: [
       "Birthday card for my adventurous dad who loves hiking",
       "Thank you card for my yoga teacher, calm and zen vibes",
@@ -61,7 +61,9 @@ function App() {
   const handleGenerate = async () => {
     if (!userInput.trim()) return;
     
+    setError(null);
     setGeneratingCard(true);
+    
     try {
       const response = await fetch('http://localhost:3001/generate-card', {
         method: 'POST',
@@ -71,11 +73,16 @@ function App() {
           language: userLanguage 
         })
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate card');
+      }
+      
       const cardData = await response.json();
       setGeneratedCard(cardData);
-    } catch (error) {
-      console.error('Card generation error:', error);
-      alert('Failed to generate card. Please try again.');
+    } catch (err) {
+      console.error('Card generation error:', err);
+      setError('Failed to generate your card. Please try again.');
     } finally {
       setGeneratingCard(false);
     }
@@ -109,6 +116,17 @@ function App() {
             {uiText.subtitle}
           </p>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <ErrorMessage 
+            message={error} 
+            onRetry={() => {
+              setError(null);
+              handleGenerate();
+            }} 
+          />
+        )}
 
         {!generatedCard ? (
           <>
@@ -149,20 +167,17 @@ function App() {
             )}
           </>
         ) : (
-          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold mb-4">Card Generated!</h3>
-              <pre className="text-left bg-gray-100 p-4 rounded-lg overflow-auto text-sm">
-                {JSON.stringify(generatedCard, null, 2)}
-              </pre>
-              <button
-                onClick={() => setGeneratedCard(null)}
-                className="mt-4 px-6 py-3 bg-gray-200 rounded-lg hover:bg-gray-300"
-              >
-                {uiText.startOver}
-              </button>
-            </div>
-          </div>
+          <CardPreview
+            cardData={generatedCard}
+            language={userLanguage}
+            onEdit={setGeneratedCard}
+            onPurchase={() => alert('Payment coming in Week 2!')}
+            onStartOver={() => {
+              setGeneratedCard(null);
+              setUserInput('');
+            }}
+            uiText={uiText}
+          />
         )}
       </div>
     </div>
@@ -170,49 +185,3 @@ function App() {
 }
 
 export default App;
-import ErrorMessage from './components/ErrorMessage';
-
-// Add this state near the top:
-const [error, setError] = useState(null);
-
-// Update handleGenerate:
-const handleGenerate = async () => {
-  if (!userInput.trim()) return;
-  
-  setError(null);
-  setGeneratingCard(true);
-  
-  try {
-    const response = await fetch('http://localhost:3001/generate-card', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        userInput,
-        language: userLanguage 
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to generate card');
-    }
-    
-    const cardData = await response.json();
-    setGeneratedCard(cardData);
-  } catch (err) {
-    console.error('Card generation error:', err);
-    setError('Failed to generate your card. Please try again.');
-  } finally {
-    setGeneratingCard(false);
-  }
-};
-
-// Add before the closing </div>:
-{error && (
-  <ErrorMessage 
-    message={error} 
-    onRetry={() => {
-      setError(null);
-      handleGenerate();
-    }} 
-  />
-)}

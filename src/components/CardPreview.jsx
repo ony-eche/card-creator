@@ -1,18 +1,29 @@
+import { useState } from 'react';
 import { pricing } from '../utils/languages';
+import { downloadPresentation } from '../utils/download';
 
-export default function CardPreview(
- cardData={generatedCard}
- language={userLanguage}
-onEdit={setGeneratedCard}
-onPurchase={() => alert('Payment coming in Week 2!')}
-onStartOver={() => {
-      setGeneratedCard(null);
-      setUserInput('');
-    }}
-    uiText={uiText}
- ) {
+export default function CardPreview({ 
+  cardData, 
+  language, 
+  onEdit, 
+  onPurchase, 
+  onStartOver,
+  uiText 
+}) {
   const currentPricing = pricing[language] || pricing['en'];
-  
+  const [downloading, setDownloading] = useState(false);
+
+const handlePreview = async () => {
+  setDownloading(true);
+  try {
+    await downloadPresentation(cardData);
+    alert('Preview downloaded! Check your downloads folder.');
+  } catch (error) {
+    alert('Failed to generate preview. Please try again.');
+  } finally {
+    setDownloading(false);
+  }
+};
   return (
     <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
       {/* Card Info */}
@@ -134,6 +145,14 @@ onStartOver={() => {
       </div>
 
       {/* Action Buttons */}
+      {/* Preview Button */}
+<button
+  onClick={handlePreview}
+  disabled={downloading}
+  className="w-full mb-4 py-3 bg-blue-100 text-blue-800 rounded-xl font-semibold hover:bg-blue-200 disabled:opacity-50"
+>
+  {downloading ? '📥 Generating...' : '👁️ Preview Full Presentation (Free)'}
+</button>
       <div className="grid grid-cols-2 gap-4">
         <button
           onClick={onStartOver}
